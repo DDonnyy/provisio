@@ -107,7 +107,7 @@ def get_osmnx_graph(city_osm_id, city_crs, graph_type, speed=None):
 
 def public_routes_to_edges(city_osm_id, city_crs, transport_type, speed, boundary):
     routes = overpass_query(get_routes, city_osm_id, transport_type)
-    print(f"Extracting and preparing {transport_type} routes:")
+    print(f"Extracting and preparing {transport_type} routes:\n")
 
     try:
         df_routes = routes.progress_apply(

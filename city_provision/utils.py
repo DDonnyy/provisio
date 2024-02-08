@@ -73,14 +73,14 @@ def convert_nx2nk(G_nx, idmap=None, weight=None):
     return G_nk
 
 
-def _get_nk_distances(nk_dists, loc):
+def get_nk_distances(nk_dists, loc):
     target_nodes = loc.index
     source_node = loc.name
     distances = [nk_dists.getDistance(source_node, node) for node in target_nodes]
     return pd.Series(data=distances, index=target_nodes)
 
 
-def _provision_matrix_transform(destination_matrix, services, buildings):
+def provision_matrix_transform(destination_matrix, services, buildings):
     def subfunc(loc):
         try:
             return [
@@ -114,25 +114,9 @@ def _provision_matrix_transform(destination_matrix, services, buildings):
     return distribution_links
 
 
-def _is_shown(self, buildings, services, Provisions):
-    if self.user_selection_zone:
-        buildings["is_shown"] = buildings.within(self.user_selection_zone)
-        a = buildings["is_shown"].copy()
-        t = []
-        for service_type in self.service_types:
-            t.append(
-                Provisions[service_type]["destination_matrix"][a[a].index.values].apply(
-                    lambda x: len(x[x > 0]) > 0, axis=1
-                )
-            )
-        services["is_shown"] = pd.concat([a[a] for a in t])
-    else:
-        buildings["is_shown"] = True
-        services["is_shown"] = True
-    return buildings, services
 
 
-def _additional_options(
+def additional_options(
     buildings,
     services,
     Matrix,
