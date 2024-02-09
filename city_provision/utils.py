@@ -52,6 +52,8 @@ def convert_nx2nk(G_nx, idmap=None, weight=None):
         for u_, v_ in edges:
             u, v = idmap[u_], idmap[v_]
             d = dict(G_nx[u_][v_])
+            u_ = int(u_)
+            v_ = int(v_)
             if len(d) > 1:
                 for d_ in d.values():
                     v__ = G_nk.addNodes(2)
@@ -110,10 +112,8 @@ def provision_matrix_transform(destination_matrix, services, buildings):
         buildings.index.values
     ) & distribution_links["service_id"].isin(services.index.values)
     sel = distribution_links.loc[sel[sel].index.values]
-    distribution_links["geometry"] = sel.apply(lambda x: subfunc_geom(x), axis=1)
+    distribution_links = distribution_links.set_geometry(sel.apply(lambda x: subfunc_geom(x), axis=1))
     return distribution_links
-
-
 
 
 def additional_options(
@@ -178,6 +178,6 @@ def additional_options(
     )
     services["service_load"] = services["capacity"] - services["capacity_left"]
     buildings = buildings[
-        [x for x in buildings.columns if service_type in x] + ["functional_object_id"]
+        [x for x in buildings.columns if service_type in x] + ["building_id"] +["geometry"]
     ]
     return buildings, services
