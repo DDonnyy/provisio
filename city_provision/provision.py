@@ -63,12 +63,14 @@ class CityProvision:
                 print("No normative radius or time")  # TODO
         self.MobilitySubGraph = load_graph_geometry(mobility_sub_graph)
 
-        self.buildings = demanded_buildings.copy(deep=True).dropna(
-            subset="id"
+        self.buildings: gpd.GeoDataFrame = (
+            demanded_buildings.copy(deep=True)
+            .dropna(subset="building_id")
+            .to_crs(self.city_crs)
         )
-        self.buildings.index = self.buildings["id"].values.astype(int)
-        self.services = services.copy(deep=True)
-        self.services.index = self.services["id"].values.astype(int)
+        self.buildings.index = self.buildings["building_id"].values.astype(int)
+        self.services = services.copy(deep=True).to_crs(self.city_crs)
+        self.services.index = self.services["service_id"].values.astype(int)
 
         self.user_provisions = {}
         self.errors = []
@@ -89,6 +91,7 @@ class CityProvision:
         self.__calculate_provisions(
             calculation_type=self.calculation_type,
         )
+
         (
             self.buildings,
             self.services,
@@ -102,8 +105,9 @@ class CityProvision:
             self.user_selection_zone,
             self.valuation_type,
         )
-        cols_to_drop = [x for x in self.buildings.columns if self.service_type in x]
-        self.buildings = self.buildings.drop(columns=cols_to_drop)
+        # cols_to_drop = [x for x in self.buildings.columns if self.service_type in x]
+        # print(cols_to_drop)
+        # self.buildings = self.buildings.drop(columns=cols_to_drop)
 
         # for service_type in self.service_types:
         #     self.buildings = self.buildings.merge(
@@ -123,7 +127,7 @@ class CityProvision:
         self.buildings = self.buildings.loc[
             :, ~self.buildings.columns.duplicated()
         ].copy()
-        self.buildings.index = self.buildings["id"].values.astype(int)
+        self.buildings.index = self.buildings["building_id"].values.astype(int)
 
         # self.services = pd.concat(
         #     [
@@ -140,13 +144,12 @@ class CityProvision:
             return {
                 "houses": self.buildings,
                 "services": self.services,
-                "provisions": {
-                    provision_matrix_transform(
-                        self.destination_matrix,
-                        self.services[self.services["is_shown"] == True],
-                        self.buildings[self.buildings["is_shown"] == True],
-                    )
-                },
+                "provisions": provision_matrix_transform(
+                    self.destination_matrix,
+                    self.services[self.services["is_shown"] == True],
+                    self.buildings[self.buildings["is_shown"] == True],
+                    self.distance_matrix
+                ).set_crs(self.city_crs),
             }
         else:
             return self
@@ -319,13 +322,13 @@ class CityProvision:
                 temp_destination_matrix,
             )
         else:
-            print(
-                houses_table[
-                    f"{service_type}_service_demand_left_value_{self.valuation_type}"
-                ].sum(),
-                services_table["capacity_left"].sum(),
-                selection_range,
-            )
+            # print(
+            #     houses_table[
+            #         f"{service_type}_service_demand_left_value_{self.valuation_type}"
+            #     ].sum(),
+            #     services_table["capacity_left"].sum(),
+            #     selection_range,
+            # )
             return destination_matrix
 
     def __provision_loop_linear(
@@ -449,13 +452,13 @@ class CityProvision:
                 service_type,
             )
         else:
-            print(
-                houses_table[
-                    f"{service_type}_service_demand_left_value_{self.valuation_type}"
-                ].sum(),
-                services_table["capacity_left"].sum(),
-                selection_range,
-            )
+            # print(
+            #     houses_table[
+            #         f"{service_type}_service_demand_left_value_{self.valuation_type}"
+            #     ].sum(),
+            #     services_table["capacity_left"].sum(),
+            #     selection_range,
+            # )
             return destination_matrix
 
     def __is_shown(self, buildings, services):

@@ -52,6 +52,8 @@ def convert_nx2nk(G_nx, idmap=None, weight=None):
         for u_, v_ in edges:
             u, v = idmap[u_], idmap[v_]
             d = dict(G_nx[u_][v_])
+            u_ = int(u_)
+            v_ = int(v_)
             if len(d) > 1:
                 for d_ in d.values():
                     v__ = G_nk.addNodes(2)
@@ -80,11 +82,17 @@ def get_nk_distances(nk_dists, loc):
     return pd.Series(data=distances, index=target_nodes)
 
 
-def provision_matrix_transform(destination_matrix, services, buildings):
+def provision_matrix_transform(
+    destination_matrix, services, buildings, distance_matrix
+):
     def subfunc(loc):
         try:
             return [
-                {"house_id": int(k), "demand": int(v), "service_id": int(loc.name)}
+                {
+                    "building_id": int(k),
+                    "demand": int(v),
+                    "service_id": int(loc.name),
+                }
                 for k, v in loc.to_dict().items()
             ]
         except:
@@ -93,7 +101,7 @@ def provision_matrix_transform(destination_matrix, services, buildings):
     def subfunc_geom(loc):
         return shapely.geometry.LineString(
             (
-                buildings["geometry"][loc["house_id"]],
+                buildings["geometry"][loc["building_id"]],
                 services["geometry"][loc["service_id"]],
             )
         )
@@ -103,17 +111,25 @@ def provision_matrix_transform(destination_matrix, services, buildings):
     flat_matrix = destination_matrix.transpose().apply(
         lambda x: subfunc(x[x > 0]), result_type="reduce"
     )
+
     distribution_links = gpd.GeoDataFrame(
         data=[item for sublist in list(flat_matrix) for item in sublist]
     )
-    sel = distribution_links["house_id"].isin(
+
+    distribution_links["distance"] = distribution_links.apply(
+        lambda x: distance_matrix.loc[x["service_id"]][x["building_id"]],
+        axis=1,
+        result_type="reduce",
+    )
+
+    sel = distribution_links["building_id"].isin(
         buildings.index.values
     ) & distribution_links["service_id"].isin(services.index.values)
     sel = distribution_links.loc[sel[sel].index.values]
-    distribution_links["geometry"] = sel.apply(lambda x: subfunc_geom(x), axis=1)
+    distribution_links = distribution_links.set_geometry(
+        sel.apply(lambda x: subfunc_geom(x), axis=1)
+    )
     return distribution_links
-
-
 
 
 def additional_options(
@@ -178,6 +194,8 @@ def additional_options(
     )
     services["service_load"] = services["capacity"] - services["capacity_left"]
     buildings = buildings[
-        [x for x in buildings.columns if service_type in x] + ["functional_object_id"]
+        [x for x in buildings.columns if service_type in x]
+        + ["building_id"]
+        + ["geometry"]
     ]
     return buildings, services

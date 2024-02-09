@@ -1,2 +1,5 @@
-*.graphhml
-*.geojson
+/*.graphml
+/*.geojson
+.idea
+cache
+test_data
