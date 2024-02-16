@@ -1,5 +1,11 @@
 /*.graphml
 /*.geojson
-.idea
-cache
-test_data
+/.idea
+/cache
+/test_data
+/poetry.lock
+src/tests
+/dist
+/.venv
+/.vscode
+__pycache__

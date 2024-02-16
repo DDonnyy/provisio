@@ -1,45 +1,46 @@
-from typing import Optional
+from typing import Optional, Any
 
+from pydantic import BaseModel, field_validator, InstanceOf
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pulp
-from networkx import MultiDiGraph
 
-from city_provision.utils import (
+from .utils import (
     additional_options,
     provision_matrix_transform,
 )
 
 
-class CityProvision():
-    def __init__(
-        self,
-        city_crs: int,
-        services: gpd.GeoDataFrame,
-        demanded_buildings: gpd.GeoDataFrame,
-        adjacency_matrix,
-        threshold: int,
-        user_selection_zone: Optional[dict] = None,  # TODO вынести в метод
-        calculation_type: str = "gravity",
-    ):
-        self.city_crs = city_crs
-        self.calculation_type = calculation_type
-        self.distance_matrix = adjacency_matrix
-        self.normative = threshold
+class CityProvision(BaseModel):
+    city_crs: int
+    services: InstanceOf[gpd.GeoDataFrame]
+    demanded_buildings: InstanceOf[gpd.GeoDataFrame]
+    adjacency_matrix: []
+    threshold: int
+    user_selection_zone: Optional[dict] = None  # TODO вынести в метод
+    calculation_type: str = "gravity"
 
-        self.buildings: gpd.GeoDataFrame = (
-            demanded_buildings.copy(deep=True)
-            .dropna(subset="building_id")
-            .to_crs(self.city_crs)
-        )
+    @staticmethod
+    @field_validator("demanded_buildings")
+    def ensure_buildings(cls, v: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+        if "building_id" not in v.columns:
+            raise KeyError("column 'building_id' not found in provided GeoDataFrame")
+        if "service_demand_value" not in v.columns:
+            raise KeyError(
+                "The column 'service_demand_value' was not found in the provided GeoDataFrame. This attribute "
+                "corresponds to the number of demands for the selected service in each building."
+            )
+
+
+        v.index = v
+        return v
+
         self.buildings.index = self.buildings["building_id"].values.astype(int)
         self.services = services.copy(deep=True).to_crs(self.city_crs)
         self.services.index = self.services["service_id"].values.astype(int)
 
-        self.buildings[f"service_demand_left_value"] = self.buildings[
-            f"service_demand_value"
-        ]
+        self.buildings[f"service_demand_left_value"] = self.buildings[f"service_demand_value"]
         self.buildings = self.buildings.dropna(subset=f"service_demand_value")
         self.services["capacity_left"] = self.services["capacity"]
         if user_selection_zone:
@@ -48,7 +49,7 @@ class CityProvision():
             self.user_selection_zone = None
 
     def get_provisions(self):
-        self.__calculate_provisions()
+        self._calculate_provisions()
         additional_options(
             self.buildings,
             self.services,
@@ -58,7 +59,7 @@ class CityProvision():
         )
 
         self.buildings.index = self.buildings["building_id"].values.astype(int)
-        self.buildings, self.services = self.__is_shown(self.buildings, self.services)
+        self.buildings, self.services = self._is_shown(self.buildings, self.services)
         self.buildings = self.buildings.fillna(0)
         self.services = self.services.fillna(0)
 
@@ -73,7 +74,7 @@ class CityProvision():
             ).set_crs(self.city_crs),
         }
 
-    def __calculate_provisions(self):
+    def _calculate_provisions(self):
         self.destination_matrix = pd.DataFrame(
             0,
             index=self.distance_matrix.index,
@@ -81,25 +82,17 @@ class CityProvision():
         )
 
         if self.calculation_type == "gravity":
-            self.destination_matrix = self.__provision_loop_gravity(
-                self.buildings.copy(),
-                self.services.copy(),
-                self.distance_matrix.copy() + 1,
-                self.normative,
-                self.destination_matrix.copy(),
-            )
+            self.destination_matrix = self._provision_loop_gravity(self.buildings.copy(), self.services.copy(),
+                                                                   self.distance_matrix.copy() + 1, self.normative,
+                                                                   self.destination_matrix.copy())
 
         elif self.calculation_type == "linear":
-            self.destination_matrix = self.__provision_loop_linear(
-                self.buildings.copy(),
-                self.services.copy(),
-                self.distance_matrix.copy(),
-                self.normative,
-                self.destination_matrix.copy(),
-            )
+            self.destination_matrix = self._provision_loop_linear(self.buildings.copy(), self.services.copy(),
+                                                                  self.distance_matrix.copy(), self.normative,
+                                                                  self.destination_matrix.copy())
         return
 
-    def __provision_loop_gravity(
+    def _provision_loop_gravity(
         self,
         houses_table,
         services_table,
@@ -118,9 +111,7 @@ class CityProvision():
             else:
                 rng = np.random.default_rng(seed=0)
                 r = pd.Series(0, p.index)
-                choice = np.unique(
-                    rng.choice(p.index, int(c), p=p.values), return_counts=True
-                )
+                choice = np.unique(rng.choice(p.index, int(c), p=p.values), return_counts=True)
                 choice = r.add(pd.Series(choice[1], choice[0]), fill_value=0)
                 return choice
 
@@ -131,61 +122,41 @@ class CityProvision():
                 p = loc / loc.sum()
                 rng = np.random.default_rng(seed=0)
                 r = pd.Series(0, p.index)
-                choice = np.unique(
-                    rng.choice(p.index, int(d), p=p.values), return_counts=True
-                )
+                choice = np.unique(rng.choice(p.index, int(d), p=p.values), return_counts=True)
                 choice = r.add(pd.Series(choice[1], choice[0]), fill_value=0)
                 choice = pd.Series(
-                    data=np.minimum(
-                        loc.sort_index().values, choice.sort_index().values
-                    ),
+                    data=np.minimum(loc.sort_index().values, choice.sort_index().values),
                     index=loc.sort_index().index,
                 )
                 return choice
             else:
                 return loc
 
-        temp_destination_matrix = distance_matrix.apply(
-            lambda x: _calculate_flows_y(x[x <= selection_range]), axis=1
-        )
+        temp_destination_matrix = distance_matrix.apply(lambda x: _calculate_flows_y(x[x <= selection_range]), axis=1)
         temp_destination_matrix = temp_destination_matrix.fillna(0)
-        temp_destination_matrix = temp_destination_matrix.apply(
-            lambda x: _balance_flows_to_demands(x)
-        )
+        temp_destination_matrix = temp_destination_matrix.apply(lambda x: _balance_flows_to_demands(x))
         temp_destination_matrix = temp_destination_matrix.fillna(0)
-        destination_matrix = destination_matrix.add(
-            temp_destination_matrix, fill_value=0
-        )
+        destination_matrix = destination_matrix.add(temp_destination_matrix, fill_value=0)
         axis_1 = destination_matrix.sum(axis=1)
         axis_0 = destination_matrix.sum(axis=0)
-        services_table["capacity_left"] = services_table["capacity"].subtract(
-            axis_1, fill_value=0
+        services_table["capacity_left"] = services_table["capacity"].subtract(axis_1, fill_value=0)
+        houses_table[f"service_demand_left_value"] = houses_table[f"service_demand_value"].subtract(
+            axis_0, fill_value=0
         )
-        houses_table[f"service_demand_left_value"] = houses_table[
-            f"service_demand_value"
-        ].subtract(axis_0, fill_value=0)
 
         distance_matrix = distance_matrix.drop(
             index=services_table[services_table["capacity_left"] == 0].index.values,
-            columns=houses_table[
-                houses_table[f"service_demand_left_value"] == 0
-            ].index.values,
+            columns=houses_table[houses_table[f"service_demand_left_value"] == 0].index.values,
             errors="ignore",
         )
         selection_range += selection_range
         if len(distance_matrix.columns) > 0 and len(distance_matrix.index) > 0:
-            return self.__provision_loop_gravity(
-                houses_table,
-                services_table,
-                distance_matrix,
-                selection_range,
-                destination_matrix,
-                temp_destination_matrix,
-            )
+            return self._provision_loop_gravity(houses_table, services_table, distance_matrix, selection_range,
+                                                destination_matrix, temp_destination_matrix)
         else:
             return destination_matrix
 
-    def __provision_loop_linear(
+    def _provision_loop_linear(
         self,
         houses_table,
         services_table,
@@ -198,10 +169,7 @@ class CityProvision():
             nans = loc.isna()
             index = nans[~nans].index
             t = pd.Series(
-                [
-                    pulp.LpVariable(name=f"route_{name}_{I}", lowBound=0, cat="Integer")
-                    for I in index
-                ],
+                [pulp.LpVariable(name=f"route_{name}_{I}", lowBound=0, cat="Integer") for I in index],
                 index,
                 dtype="object",
             )
@@ -258,9 +226,7 @@ class CityProvision():
         result = result.join(
             pd.DataFrame(
                 0,
-                columns=list(
-                    set(set(destination_matrix.columns) - set(result.columns))
-                ),
+                columns=list(set(set(destination_matrix.columns) - set(result.columns))),
                 index=destination_matrix.index,
             ),
             how="outer",
@@ -269,42 +235,29 @@ class CityProvision():
         destination_matrix = destination_matrix + result
         axis_1 = destination_matrix.sum(axis=1)
         axis_0 = destination_matrix.sum(axis=0)
-        services_table["capacity_left"] = services_table["capacity"].subtract(
-            axis_1, fill_value=0
+        services_table["capacity_left"] = services_table["capacity"].subtract(axis_1, fill_value=0)
+        houses_table[f"service_demand_left_value"] = houses_table[f"service_demand_value"].subtract(
+            axis_0, fill_value=0
         )
-        houses_table[f"service_demand_left_value"] = houses_table[
-            f"service_demand_value"
-        ].subtract(axis_0, fill_value=0)
 
         distance_matrix = distance_matrix.drop(
             index=services_table[services_table["capacity_left"] == 0].index.values,
-            columns=houses_table[
-                houses_table[f"service_demand_left_value"] == 0
-            ].index.values,
+            columns=houses_table[houses_table[f"service_demand_left_value"] == 0].index.values,
             errors="ignore",
         )
 
         selection_range += selection_range
         if len(distance_matrix.columns) > 0 and len(distance_matrix.index) > 0:
-            return self.__provision_loop_linear(
-                houses_table,
-                services_table,
-                distance_matrix,
-                selection_range,
-                destination_matrix,
-            )
+            return self._provision_loop_linear(houses_table, services_table, distance_matrix, selection_range,
+                                               destination_matrix)
         else:
             return destination_matrix
 
-    def __is_shown(self, buildings, services):
+    def _is_shown(self, buildings, services):
         if self.user_selection_zone:
             buildings["is_shown"] = buildings.within(self.user_selection_zone)
             a = buildings["is_shown"].copy()
-            t = [
-                self.destination_matrix[a[a].index.values].apply(
-                    lambda x: len(x[x > 0]) > 0, axis=1
-                )
-            ]
+            t = [self.destination_matrix[a[a].index.values].apply(lambda x: len(x[x > 0]) > 0, axis=1)]
             services["is_shown"] = pd.concat([a[a] for a in t])
         else:
             buildings["is_shown"] = True

@@ -1,4 +1,5 @@
 """Demands calculation logic is defined here."""
+
 import pandas as pd
 
 
