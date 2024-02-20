@@ -1,4 +1,4 @@
-CODE := src
+CODE := src/provisio
 
 lint:
 	poetry run pylint $(CODE)

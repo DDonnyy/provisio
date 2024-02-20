@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "city_provision"
+name = "provisio"
 version = "0.1.0"
 description = "Small utility library containing city provision metric used in other projects"
 authors = ["Danila <63115678+DDonnyy@users.noreply.github.com>"]
 readme = "README.md"
 
-packages = [{ include = "city_provision", from = "src" }]
+packages = [{ include = "provisio", from = "src" }]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -19,6 +19,7 @@ networkit = "^11.0"
 numpy = "^1.23.5"
 pandas = "^2.2.0"
 networkx = "^3.2.1"
+pulp = "^2.8.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.2.0"
