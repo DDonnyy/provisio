@@ -8,6 +8,7 @@ Small utility library containing city provision metric used in other projects
 ## Base usage example
 Use [dongraphio](https://github.com/DDonnyy/dongraphio) to get city's IntermodalGraph and adjacency matrix between two geodataframes
 
+### SOON IN PYPI
 ```pip install provisio```
 
 ```python
