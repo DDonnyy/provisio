@@ -1,9 +1,10 @@
 import geopandas as gpd
 import numpy as np
+import pandas as pd
 import shapely
 
 
-def provision_matrix_transform(destination_matrix, services, buildings, distance_matrix):
+def provision_matrix_transform(destination_matrix:pd.DataFrame, services:gpd.GeoDataFrame, buildings:gpd.GeoDataFrame, distance_matrix:pd.DataFrame):
     def subfunc(loc):
         try:
             return [
@@ -42,7 +43,7 @@ def provision_matrix_transform(destination_matrix, services, buildings, distance
     )
     sel = distribution_links.loc[sel[sel].index.values]
     distribution_links = distribution_links.set_geometry(sel.apply(lambda x: subfunc_geom(x), axis=1)).set_crs(
-        buildings
+        buildings.crs
     )
     return distribution_links
 

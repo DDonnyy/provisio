@@ -78,7 +78,7 @@ class CityProvision(BaseModel):
         self.adjacency_matrix.drop(columns=(list(dif)), inplace=True)
         return self
 
-    def _get_provisions(self) -> (gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame):
+    def get_provisions(self) -> (gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame):
         self._calculate_provisions()
         additional_options(
             self.demanded_buildings,

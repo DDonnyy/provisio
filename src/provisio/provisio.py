@@ -16,10 +16,10 @@ def demands_from_buildings_by_normative(buildings_with_people: gpd.GeoDataFrame,
 
 
 def get_service_provision(
-    services: gpd.GeoDataFrame, matrix: pd.DataFrame, demanded_buildings: gpd.GeoDataFrame, threshold: int
+    services: gpd.GeoDataFrame, adjacency_matrix: pd.DataFrame, demanded_buildings: gpd.GeoDataFrame, threshold: int
 ) -> (gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame):
     """Calculate load from buildings with demands on the given services using the distances matrix between them."""
     provision_buildings, provision_services, provision_links = CityProvision(
-        services=services, demanded_buildings=demanded_buildings, adjacency_matrix=matrix, threshold=threshold
+        services=services, demanded_buildings=demanded_buildings, adjacency_matrix=adjacency_matrix, threshold=threshold
     ).get_provisions()
     return provision_buildings, provision_services, provision_links
