@@ -18,7 +18,7 @@ from provisio import *
 
 builds = gpd.read_file("test_data/buildings.geojson")
 services = gpd.read_file("test_data/services.geojson")
-matrix = pd.read_csv("test_data/services.geojson")
+matrix = pd.read_csv("test_data/matrix.csv")
 
 demanded_building = demands_from_buildings_by_normative(builds,0.1)
 

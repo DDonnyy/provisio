@@ -5,6 +5,7 @@
 /test_data
 /poetry.lock
 src/tests
+src/test
 /dist
 /.venv
 /.vscode
