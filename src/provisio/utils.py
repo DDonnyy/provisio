@@ -4,7 +4,12 @@ import pandas as pd
 import shapely
 
 
-def provision_matrix_transform(destination_matrix:pd.DataFrame, services:gpd.GeoDataFrame, buildings:gpd.GeoDataFrame, distance_matrix:pd.DataFrame):
+def provision_matrix_transform(
+    destination_matrix: pd.DataFrame,
+    services: gpd.GeoDataFrame,
+    buildings: gpd.GeoDataFrame,
+    distance_matrix: pd.DataFrame,
+):
     def subfunc(loc):
         try:
             return [
@@ -55,18 +60,11 @@ def additional_options(
     destination_matrix,
     normative_distance,
 ):
-    # clear matrix same size as buildings and services if user sent sth new
-    cols_to_drop = list(set(set(matrix.columns.values) - set(buildings.index.values)))
-    rows_to_drop = list(set(set(matrix.index.values) - set(services.index.values)))
-    matrix = matrix.drop(index=rows_to_drop, columns=cols_to_drop, errors="ignore")
-    destination_matrix = destination_matrix.drop(index=rows_to_drop, columns=cols_to_drop, errors="ignore")
     # bad performance
     # bad code
     # rewrite to vector operations [for col in ****]
-    buildings["demand_left"] = buildings["demand"]
     buildings["supplyed_demands_within"] = 0
     buildings["supplyed_demands_without"] = 0
-    services["capacity_left"] = services["capacity"]
     services["carried_capacity_within"] = 0
     services["carried_capacity_without"] = 0
     for i in range(len(destination_matrix)):

@@ -1,5 +1,6 @@
+# pylint: disable=singleton-comparison
 import logging
-from typing import Optional
+from typing import Literal
 
 import geopandas as gpd
 import numpy as np
@@ -12,16 +13,33 @@ from .utils import (
     provision_matrix_transform,
 )
 
-# pylint: disable=singleton-comparison
-
 
 class CityProvision(BaseModel):
+    """
+    Represents the logic for city provision calculations using a gravity or linear model.
+
+    Args:
+        services (InstanceOf[gpd.GeoDataFrame]): GeoDataFrame representing the services available in the city.
+        demanded_buildings (InstanceOf[gpd.GeoDataFrame]): GeoDataFrame representing the buildings with demands for services.
+        adjacency_matrix (InstanceOf[pd.DataFrame]): DataFrame representing the adjacency matrix between buildings.
+        threshold (int): Threshold value for the provision calculations.
+        user_selection_zone (Optional[dict], optional): User selection zone. Defaults to None.
+        calculation_type (str, optional): Type of calculation ("gravity" or "linear"). Defaults to "gravity".
+
+    Returns:
+        CityProvision: The CityProvision object.
+
+    Raises: KeyError: If the 'demand' column is missing in the provided 'demanded_buildings' GeoDataFrame,
+    or if the 'capacity' column is missing in the provided 'services' GeoDataFrame. ValueError: If the 'capacity'
+    column in 'services' or 'demand' column  'demanded_buildings' GeoDataFrame has no valid value.
+    """
+
     services: InstanceOf[gpd.GeoDataFrame]
     demanded_buildings: InstanceOf[gpd.GeoDataFrame]
     adjacency_matrix: InstanceOf[pd.DataFrame]
     threshold: int
-    user_selection_zone: Optional[dict] = None  # TODO вынести в метод
-    calculation_type: str = "gravity"
+    user_selection_zone: dict = None  # TODO вынести в метод
+    calculation_type: Literal["gravity", "linear"] = "gravity"
     _destination_matrix = None
 
     @field_validator("demanded_buildings")
@@ -38,6 +56,8 @@ class CityProvision(BaseModel):
         v = v.dropna(subset="demand")
         dif_rows_count = rows_count - v.shape[0]
         v["demand_left"] = v["demand"]
+        if v.shape[0] == 0:
+            raise ValueError("Column 'demand' in 'demanded_buildings' GeoDataFrame  has no valid value")
         if dif_rows_count > 0:
             logging.info(
                 "%s rows were deleted from the 'demanded_buildings' GeoDataFrame due"
