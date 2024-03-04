@@ -8,6 +8,7 @@ import pandas as pd
 import pulp
 from pydantic import BaseModel, InstanceOf, field_validator, model_validator
 
+from .provisio_exceptions import *
 from .utils import (
     additional_options,
     provision_matrix_transform,
@@ -45,10 +46,7 @@ class CityProvision(BaseModel):
     @classmethod
     def ensure_buildings(cls, v: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         if "demand" not in v.columns:
-            raise KeyError(
-                "The column 'demand' was not found in the provided 'demanded_buildings' GeoDataFrame. "
-                "This attribute corresponds to the number of demands for the selected service in each building."
-            )
+            raise DemandKeyError
         v = v.copy()
         v["demand"] = v["demand"].replace(0, np.nan)
         rows_count = v.shape[0]
@@ -56,7 +54,7 @@ class CityProvision(BaseModel):
         dif_rows_count = rows_count - v.shape[0]
         v["demand_left"] = v["demand"]
         if v.shape[0] == 0:
-            raise ValueError("Column 'demand' in 'demanded_buildings' GeoDataFrame  has no valid value")
+            raise DemandValueError
         if dif_rows_count > 0:
             logging.info(
                 "%s rows were deleted from the 'demanded_buildings' GeoDataFrame due"
@@ -69,17 +67,14 @@ class CityProvision(BaseModel):
     @classmethod
     def ensure_services(cls, v: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         if "capacity" not in v.columns:
-            raise KeyError(
-                "Column 'capacity' was not found in provided 'services' GeoDataFrame. This attribute "
-                "corresponds to the total capacity for each service."
-            )
+            raise CapacityKeyError
         v = v.copy()
         rows_count = v.shape[0]
         v["capacity"] = v["capacity"].replace(0, np.nan)
         v = v.dropna(subset="capacity")
         dif_rows_count = rows_count - v.shape[0]
         if v.shape[0] == 0:
-            raise ValueError("Column 'capacity' in 'services' GeoDataFrame  has no valid value")
+            raise CapacityValueError
         if dif_rows_count > 0:
             logging.info(
                 "%s rows were deleted from the 'services' GeoDataFrame due to null values in the 'capacity' column",
