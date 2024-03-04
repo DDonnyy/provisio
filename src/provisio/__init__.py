@@ -1,4 +1,4 @@
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 from .provisio import demands_from_buildings_by_normative, get_service_provision
 from .utils import is_shown
