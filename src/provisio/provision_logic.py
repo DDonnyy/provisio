@@ -306,13 +306,4 @@ class CityProvision(BaseModel):
             )
         return destination_matrix
 
-    def _is_shown(self, buildings, services):
-        if self.user_selection_zone:
-            buildings["is_shown"] = buildings.within(self.user_selection_zone)
-            a = buildings["is_shown"].copy()
-            t = [self._destination_matrix[a[a].index.values].apply(lambda x: len(x[x > 0]) > 0, axis=1)]
-            services["is_shown"] = pd.concat([a[a] for a in t])
-        else:
-            buildings["is_shown"] = True
-            services["is_shown"] = True
-        return buildings, services
+

@@ -89,3 +89,10 @@ def additional_options(
     buildings["provison_value"] = buildings["supplyed_demands_within"] / buildings["demand"]
     services["service_load"] = services["capacity"] - services["capacity_left"]
     buildings = buildings[[x for x in buildings.columns] + ["building_id"] + ["geometry"]]
+
+def is_shown(buildings:gpd.GeoDataFrame, services:gpd.GeoDataFrame,selection_zone:gpd.GeoDataFrame):
+    buildings["is_shown"] = buildings.within(selection_zone)
+    a = buildings["is_shown"].copy()
+    t = [self._destination_matrix[a[a].index.values].apply(lambda x: len(x[x > 0]) > 0, axis=1)]
+    services["is_shown"] = pd.concat([a[a] for a in t])
+    return buildings, services
