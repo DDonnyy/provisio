@@ -1,6 +1,6 @@
 # pylint: disable=singleton-comparison
 import logging
-from typing import Literal
+from typing import Literal, Tuple
 
 import geopandas as gpd
 import numpy as np
@@ -38,7 +38,6 @@ class CityProvision(BaseModel):
     demanded_buildings: InstanceOf[gpd.GeoDataFrame]
     adjacency_matrix: InstanceOf[pd.DataFrame]
     threshold: int
-    user_selection_zone: dict = None  # TODO вынести в метод
     calculation_type: Literal["gravity", "linear"] = "gravity"
     _destination_matrix = None
 
@@ -91,14 +90,14 @@ class CityProvision(BaseModel):
 
     @model_validator(mode="after")
     def delete_useless_matrix_columns(self) -> "CityProvision":
-        self.adjacency_matrix = self.adjacency_matrix.copy()
-        indexes = set(self.demanded_buildings.index.tolist())
-        columns = set(self.adjacency_matrix.columns.tolist())
+        self.adjacency_matrix.columns = self.adjacency_matrix.columns.astype(int)
+        indexes = set(self.demanded_buildings.index.astype(int).tolist())
+        columns = set(self.adjacency_matrix.columns.astype(int).tolist())
         dif = columns ^ indexes
         self.adjacency_matrix.drop(columns=(list(dif)), inplace=True)
         return self
 
-    def get_provisions(self) -> (gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame):
+    def get_provisions(self) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame]:
         self._calculate_provisions()
         additional_options(
             self.demanded_buildings,
@@ -107,7 +106,6 @@ class CityProvision(BaseModel):
             self._destination_matrix,
             self.threshold,
         )
-        self.demanded_buildings, self.services = self._is_shown(self.demanded_buildings, self.services)
         self.demanded_buildings = self.demanded_buildings.fillna(0)
         self.services = self.services.fillna(0)
 
@@ -116,8 +114,8 @@ class CityProvision(BaseModel):
             self.services,
             provision_matrix_transform(
                 self._destination_matrix,
-                self.services[self.services["is_shown"] == True],
-                self.demanded_buildings[self.demanded_buildings["is_shown"] == True],
+                self.services,
+                self.demanded_buildings,
                 self.adjacency_matrix,
             ),
         )
@@ -305,5 +303,3 @@ class CityProvision(BaseModel):
                 houses_table, services_table, distance_matrix, selection_range, destination_matrix
             )
         return destination_matrix
-
-

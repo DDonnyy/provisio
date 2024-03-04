@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -26,13 +28,15 @@ def provision_matrix_transform(
     def subfunc_geom(loc):
         return shapely.geometry.LineString(
             (
-                buildings["geometry"][loc["building_index"]],
-                services["geometry"][loc["service_index"]],
+                buildings_["geometry"][loc["building_index"]],
+                services_["geometry"][loc["service_index"]],
             )
         )
 
-    buildings.geometry = buildings.centroid
-    services.geometry = services.centroid
+    buildings_ = buildings.copy()
+    services_ = services.copy()
+    buildings_.geometry = buildings_.centroid
+    services_.geometry = services_.centroid
     flat_matrix = destination_matrix.transpose().apply(lambda x: subfunc(x[x > 0]), result_type="reduce")
 
     distribution_links = gpd.GeoDataFrame(data=[item for sublist in list(flat_matrix) for item in sublist])
@@ -43,12 +47,12 @@ def provision_matrix_transform(
         result_type="reduce",
     )
 
-    sel = distribution_links["building_index"].isin(buildings.index.values) & distribution_links["service_index"].isin(
-        services.index.values
+    sel = distribution_links["building_index"].isin(buildings_.index.values) & distribution_links["service_index"].isin(
+        services_.index.values
     )
     sel = distribution_links.loc[sel[sel].index.values]
     distribution_links = distribution_links.set_geometry(sel.apply(lambda x: subfunc_geom(x), axis=1)).set_crs(
-        buildings.crs
+        buildings_.crs
     )
     return distribution_links
 
@@ -90,9 +94,14 @@ def additional_options(
     services["service_load"] = services["capacity"] - services["capacity_left"]
     buildings = buildings[[x for x in buildings.columns] + ["building_id"] + ["geometry"]]
 
-def is_shown(buildings:gpd.GeoDataFrame, services:gpd.GeoDataFrame,selection_zone:gpd.GeoDataFrame):
-    buildings["is_shown"] = buildings.within(selection_zone)
-    a = buildings["is_shown"].copy()
-    t = [self._destination_matrix[a[a].index.values].apply(lambda x: len(x[x > 0]) > 0, axis=1)]
-    services["is_shown"] = pd.concat([a[a] for a in t])
-    return buildings, services
+
+def is_shown(
+    buildings: gpd.GeoDataFrame, services: gpd.GeoDataFrame, links: gpd.GeoDataFrame, selection_zone: gpd.GeoDataFrame
+) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame]:
+    buildings.reset_index(inplace=True)
+    buildings = gpd.overlay(buildings, selection_zone, how="intersection")
+    buildings.set_index("index", inplace=True)
+    links = links[links["building_index"].isin(buildings.index.tolist())]
+    services_to_keep = set(links["service_index"].tolist())
+    services.drop(list(set(services.index.tolist()) - services_to_keep), inplace=True)
+    return buildings, services, links

@@ -26,7 +26,7 @@ black = "^24.2.0"
 pylint = "^3.0.3"
 isort = "^5.13.2"
 jupyter = "^1.0.0"
-uild-system]
+[build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
