@@ -8,11 +8,11 @@ class CapacityKeyError(KeyError):
     def __str__(self):
         if self.message:
             return "CapacityKeyError, {0} ".format(self.message)
-        else:
-            return (
-                "Column 'capacity' was not found in provided 'services' GeoDataFrame. This attribute "
-                "corresponds to the total capacity for each service."
-            )
+
+        return (
+            "Column 'capacity' was not found in provided 'services' GeoDataFrame. This attribute "
+            "corresponds to the total capacity for each service."
+        )
 
 
 class CapacityValueError(ValueError):
@@ -25,8 +25,8 @@ class CapacityValueError(ValueError):
     def __str__(self):
         if self.message:
             return "CapacityValueError, {0} ".format(self.message)
-        else:
-            return "Column 'capacity' in 'services' GeoDataFrame  has no valid value."
+
+        return "Column 'capacity' in 'services' GeoDataFrame  has no valid value."
 
 
 class DemandKeyError(KeyError):
@@ -39,11 +39,11 @@ class DemandKeyError(KeyError):
     def __str__(self):
         if self.message:
             return "DemandKeyError, {0} ".format(self.message)
-        else:
-            return (
-                "The column 'demand' was not found in the provided 'demanded_buildings' GeoDataFrame. "
-                "This attribute corresponds to the number of demands for the selected service in each building."
-            )
+
+        return (
+            "The column 'demand' was not found in the provided 'demanded_buildings' GeoDataFrame. "
+            "This attribute corresponds to the number of demands for the selected service in each building."
+        )
 
 
 class DemandValueError(ValueError):
@@ -56,5 +56,4 @@ class DemandValueError(ValueError):
     def __str__(self):
         if self.message:
             return "DemandValueError, {0} ".format(self.message)
-        else:
-            return "Column 'demand' in 'demanded_buildings' GeoDataFrame  has no valid value."
+        return "Column 'demand' in 'demanded_buildings' GeoDataFrame  has no valid value."

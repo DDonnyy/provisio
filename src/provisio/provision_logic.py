@@ -1,11 +1,11 @@
 # pylint: disable=singleton-comparison
-from loguru import logger
 from typing import Literal, Tuple
 
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pulp
+from loguru import logger
 from pydantic import BaseModel, InstanceOf, field_validator, model_validator
 
 from .provisio_exceptions import *
