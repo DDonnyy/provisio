@@ -1,5 +1,5 @@
 # pylint: disable=singleton-comparison
-import logging
+from loguru import logger
 from typing import Literal, Tuple
 
 import geopandas as gpd
@@ -56,8 +56,8 @@ class CityProvision(BaseModel):
         if v.shape[0] == 0:
             raise DemandValueError
         if dif_rows_count > 0:
-            logging.info(
-                "%s rows were deleted from the 'demanded_buildings' GeoDataFrame due"
+            logger.warning(
+                "{} rows were deleted from the 'demanded_buildings' GeoDataFrame due"
                 " to null or zero values in the 'demand' column",
                 dif_rows_count,
             )
@@ -76,8 +76,8 @@ class CityProvision(BaseModel):
         if v.shape[0] == 0:
             raise CapacityValueError
         if dif_rows_count > 0:
-            logging.info(
-                "%s rows were deleted from the 'services' GeoDataFrame due to null values in the 'capacity' column",
+            logger.warning(
+                "{} rows were deleted from the 'services' GeoDataFrame due to null values in the 'capacity' column",
                 dif_rows_count,
             )
         v["capacity_left"] = v["capacity"]
@@ -121,7 +121,12 @@ class CityProvision(BaseModel):
             index=self.adjacency_matrix.index,
             columns=self.adjacency_matrix.columns,
         )
-
+        logger.debug(
+            "Calculating provision from {} services to {} buildings with {} method, it may take a while ...",
+            len(self.services),
+            len(self.demanded_buildings),
+            self.calculation_type,
+        )
         if self.calculation_type == "gravity":
             self._destination_matrix = self._provision_loop_gravity(
                 self.demanded_buildings.copy(),
