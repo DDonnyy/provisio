@@ -92,7 +92,6 @@ def additional_options(
         )
     buildings["provison_value"] = buildings["supplyed_demands_within"] / buildings["demand"]
     services["service_load"] = services["capacity"] - services["capacity_left"]
-    buildings = buildings[[x for x in buildings.columns] + ["building_id"] + ["geometry"]]
 
 
 def is_shown(
