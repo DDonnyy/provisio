@@ -5,6 +5,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pulp
+import pydantic
 from loguru import logger
 from pydantic import BaseModel, InstanceOf, field_validator, model_validator
 
@@ -84,12 +85,19 @@ class CityProvision(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def delete_useless_matrix_columns(self) -> "CityProvision":
-        self.adjacency_matrix.columns = self.adjacency_matrix.columns.astype(int)
+    def delete_useless_matrix_rows(self) -> "CityProvision":
+        self.adjacency_matrix.index = self.adjacency_matrix.index.astype(int)
         indexes = set(self.demanded_buildings.index.astype(int).tolist())
-        columns = set(self.adjacency_matrix.columns.astype(int).tolist())
-        dif = columns ^ indexes
-        self.adjacency_matrix.drop(columns=(list(dif)), inplace=True)
+        rows = set(self.adjacency_matrix.index.astype(int).tolist())
+        dif = rows ^ indexes
+        self.adjacency_matrix.drop(index=(list(dif)), axis=0, inplace=True)
+        return self
+
+    @model_validator(mode="after")
+    def check_crs(self) -> "CityProvision":
+        assert (
+            self.demanded_buildings.crs == self.services.crs
+        ), f"\nThe CRS in the provided geodataframes are different.\nBuildings CRS:{self.demanded_buildings.crs}\nServices CRS:{self.services.crs} \n"
         return self
 
     def get_provisions(self) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame]:
@@ -118,9 +126,10 @@ class CityProvision(BaseModel):
     def _calculate_provisions(self):
         self._destination_matrix = pd.DataFrame(
             0,
-            index=self.adjacency_matrix.index,
-            columns=self.adjacency_matrix.columns,
+            index=self.adjacency_matrix.columns,
+            columns=self.adjacency_matrix.index,
         )
+        self.adjacency_matrix = self.adjacency_matrix.transpose()
         logger.debug(
             "Calculating provision from {} services to {} buildings with {} method, it may take a while ...",
             len(self.services),

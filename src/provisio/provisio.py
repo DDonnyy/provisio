@@ -22,9 +22,9 @@ def demands_from_buildings_by_normative(buildings_with_people: gpd.GeoDataFrame,
 
 
 def get_service_provision(
-    services: gpd.GeoDataFrame,
-    adjacency_matrix: pd.DataFrame,
     demanded_buildings: gpd.GeoDataFrame,
+    adjacency_matrix: pd.DataFrame,
+    services: gpd.GeoDataFrame,
     threshold: int,
     calculation_type: str = "gravity",
 ) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame]:
