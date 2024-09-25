@@ -1,6 +1,7 @@
+# Outdated. 
+## It will no longer be supported. The latest version of the method has been migrated to [ObjectNat](https://github.com/DDonnyy/objectnat) .
 
-
-# Provisio
+## Provisio 
 
 Small utility library containing city provision metric used in other projects
 
